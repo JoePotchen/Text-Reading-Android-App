@@ -1,4 +1,4 @@
-package com.potchen.apps.cameratest;
+package com.potchen.apps.VisuallyImpairedReading;
 
 import android.annotation.TargetApi;
 import android.content.Intent;
@@ -6,7 +6,9 @@ import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.hardware.Camera;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,12 +26,16 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
+import com.googlecode.tesseract.android.TessBaseAPI;
+
 import org.opencv.android.Utils;
+import org.opencv.core.CvException;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -186,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void putTessData() {
+        Log.d("CamTest", "putTessData()");
         if(!(new File(DATA_PATH + "/tessdata/" + LANG + ".traineddata")).exists()){
             try{
                 AssetManager assetManager = getAssets();
@@ -249,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
         sendBroadcast(mediaScanIntent);
     }
 
-    private void saveImageTask(byte[] data){
+    private void saveImageTask(byte[] data) {
         notWorking = false;
 
         /*
@@ -284,78 +291,93 @@ public class MainActivity extends AppCompatActivity {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HH_mm_ss");
 
 
+        if(!(new File(DATA_PATH)).exists()){
+            Log.e("ERROR", "PATH DOESNT EXIST");
+        }
+
         FileOutputStream out = null;
-        try{
-            File imageFileFolder = new File(Environment.getExternalStorageDirectory(), "CameraTest");
-            imageFileFolder.mkdir();
+        try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
             File f = new File(Environment.getExternalStorageDirectory(), "CameraTest/" + "PreThresh_" + dateFormat.format(new Date()) + ".png");
             out = new FileOutputStream(f);
             out.write(bytes.toByteArray());
             out.close();
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
-            try{
-                if(out != null){
+        } finally {
+            try {
+                if (out != null) {
                     out.close();
                 }
-            }catch (IOException e){
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
+
         Bitmap threshed;
-        threshed =  AdaptiveThreshold.threshold(bitmap, Integer.parseInt(sharedPreference.getString("maxValue", "255")), AdaptiveThreshold.ADAPTIVE_THRESHOLD_MEAN,
+        threshed = AdaptiveThreshold.threshold(bitmap, Integer.parseInt(sharedPreference.getString("maxValue", "255")), 2,
                 Integer.parseInt(sharedPreference.getString("blockSize", "5")), Integer.parseInt(sharedPreference.getString("constant", "10"))).copy(bitmap.getConfig(), true);
 
         //MediaStore.Images.Media.insertImage(getContentResolver(), threshed, "Threshold_Test", "");
 
-        Mat mat = new Mat();
+        /*Mat mat = new Mat();
         Mat matThresh = new Mat();
         Utils.bitmapToMat(bitmap, mat);
-        Imgproc.adaptiveThreshold(mat, matThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 15, 40);
+        Imgproc.adaptiveThreshold(mat, matThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 15, 40);*/
 
         out = null;
-        try{
+        try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             threshed.compress(Bitmap.CompressFormat.PNG, 100, bytes);
             File f = new File(Environment.getExternalStorageDirectory(), "CameraTest/" + "PostThresh_" + dateFormat.format(new Date()) + ".png");
             out = new FileOutputStream(f);
             out.write(bytes.toByteArray());
             out.close();
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
-            try{
-                if(out != null){
+        } finally {
+            try {
+                if (out != null) {
                     out.close();
                 }
-            }catch (IOException e){
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
         //bitmap = adaptiveThresh
-        /*
-        Mat mat = new Mat();
+
+        /*Mat mat = new Mat();
         Mat matThresh = new Mat();
         Utils.bitmapToMat(bitmap, mat);
-        Imgproc.adaptiveThreshold(mat, matThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 15, 40);
+        Imgproc.adaptiveThreshold(mat, matThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 15, 40);*/
 
+
+
+        FileOutputStream outPut = null;
         try {
-            bitmap = null;
-            bitmap = Bitmap.createBitmap(matThresh.cols(), matThresh.rows(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(matThresh, bitmap);
-        }catch (CvException e){
-            Log.e("ERROR", "Mat to bitmap");
+            File file = new File(DATA_PATH);
+            file.mkdirs();
+            outPut = new FileOutputStream(DATA_PATH + "/output.png");
+            threshed.compress(Bitmap.CompressFormat.PNG, 100, outPut); // bmp is your Bitmap instance
+            // PNG is a lossless format, the compression factor (100) is ignored
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        */
 
-        /*
+
         try {
-            ExifInterface exif = new ExifInterface(DATA_PATH);
+            ExifInterface exif = new ExifInterface(DATA_PATH + "/output.png");
             int exifOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
 
             Log.v(TAG, "Orient: " + exifOrientation);
@@ -376,55 +398,51 @@ public class MainActivity extends AppCompatActivity {
             if (rotate != 0) {
 
                 // Getting width & height of the given image.
-                int w = bitmap.getWidth();
-                int h = bitmap.getHeight();
+                int w = threshed.getWidth();
+                int h = threshed.getHeight();
 
                 // Setting pre rotate
                 Matrix mtx = new Matrix();
                 mtx.preRotate(rotate);
 
                 // Rotating Bitmap
-                bitmap = Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, false);
+                threshed = Bitmap.createBitmap(threshed, 0, 0, w, h, mtx, false);
             }
 
             // Convert to ARGB_8888, required by tess
-            bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+            threshed = threshed.copy(Bitmap.Config.ARGB_8888, true);
         } catch (IOException e) {
             Log.e(TAG, "Couldn't correct orientation: " + e.toString());
         }
 
-        FileOutputStream out = null;
-        try{
+        /*out = null;
+        try {
             out = new FileOutputStream("OcrImage");
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
-            try{
-                if(out != null){
+        } finally {
+            try {
+                if (out != null) {
                     out.close();
                 }
-            }catch (IOException e){
+            } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
-        */
+        }*/
 
 
-
-
-
-        /*TessBaseAPI baseAPI = new TessBaseAPI();
+        TessBaseAPI baseAPI = new TessBaseAPI();
         baseAPI.setDebug(true);
         baseAPI.init(DATA_PATH, LANG);
         //baseAPI.setImage(bitmap);
-        baseAPI.setImage((uchar*)matThresh.dataAddr());
+        baseAPI.setImage(threshed);
         String recognizedText = baseAPI.getUTF8Text();
         baseAPI.end();
 
         Log.v(TAG, "OCRED TEXT: " + recognizedText);
 
-        if( LANG.equalsIgnoreCase("eng")){
+        if (LANG.equalsIgnoreCase("eng")) {
             recognizedText = recognizedText.replaceAll("[^a-zA-Z0-9]+", " ");
         }
 
@@ -432,18 +450,18 @@ public class MainActivity extends AppCompatActivity {
         recognizedText = recognizedText.trim();
 
 
+        if (recognizedText.length() != 0) {
 
 
-        if(recognizedText.length() != 0){
-
-
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP){
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 ttsGreater21(recognizedText);
-            }else{
+            } else {
                 ttsUnder20(recognizedText);
             }
-        */
+
+
+        }
+
         notWorking = true;
     }
 

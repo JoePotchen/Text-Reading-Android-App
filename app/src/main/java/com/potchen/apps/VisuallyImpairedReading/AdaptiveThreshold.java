@@ -9,7 +9,7 @@
 
 
 
-package com.potchen.apps.cameratest;
+package com.potchen.apps.VisuallyImpairedReading;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -18,6 +18,8 @@ import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.util.Log;
+
+import java.util.Arrays;
 
 /**
  * Created by Joe on 4/13/16.
@@ -39,7 +41,7 @@ public class AdaptiveThreshold {
         Bitmap holder = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);;
         switch (thresholdType){
             case 1:
-                gaussianThresh();
+                holder = gaussianThresh(bitmap, maxValue, 2, constant).copy(bitmap.getConfig(), true);
                 break;
             case 2:
                 holder = meanThresh(bitmap, maxValue, blockSize, constant).copy(bitmap.getConfig(), true);
@@ -51,23 +53,70 @@ public class AdaptiveThreshold {
         return holder;
     }
 
-    private static void gaussianThresh(Bitmap bitmap, int maxValue, int blockSize, int constant){
+    private static Bitmap gaussianThresh(Bitmap bitmap, int maxValue, int blockSize, int constant){
         Bitmap holder = bitmap.copy(bitmap.getConfig(), true);
 
         int[][] luminanceArray = getInts(holder);
+        int[][] gaussianMask = new int[(blockSize * 2) + 1][(blockSize * 2) + 1];
+        /*int count = 0;
+        int midX = gaussianMask[0].length;
+        int midY = gaussianMask.length;
+        for(int x1 = 0; x1 < blockSize + 1; x1++){
+            for(int y1 = 0; y1 < blockSize + 1; y1++){
+                gaussianMask[x1][y1] = (int)Math.exp(-((Math.pow(x1 - midX, 2)/(2*Math.pow(blockSize , 2))) + (Math.pow(x1 - midY, 2)/(2*Math.pow(blockSize , 2)))));
+            }
+        }*/
+        int arrMid = (blockSize / 2) + 1;
+
+        Arrays.fill(gaussianMask, 1);
+
+        int addNum = 1;
+        int holdNum;
+        int contNum = 0;
+        int y1;
+        for(y1 = 0; y1 <= (gaussianMask[0].length / 2) + 1; y1++){
+            holdNum = addNum;
+            gaussianMask[y1][arrMid] += addNum;
+            addNum -= 1;
+            for(int x1 = 1; x1 <= gaussianMask.length / 2; x1++){
+                if(addNum >= 0) {
+                    gaussianMask[y1][arrMid - x1] += addNum;
+                    gaussianMask[y1][arrMid + x1] += addNum;
+                }
+                addNum -= 1;
+            }
+            addNum = holdNum + 1;
+
+        }
+
+        for(int y2 = y1; y2 < gaussianMask[0].length; y2++){
+            holdNum = addNum;
+
+        }
+
+        gaussianMask = new int[][]{
+                {1 , 1 , 1 , 1 , 1},
+                {1 , 1 , 2 , 1 , 1},
+                {1 , 2 , 3 , 2 , 1},
+                {0 , 1 , 2 , 1 , 1},
+                {0 , 1 , 1 , 1 , 1}
+        };
 
         for(int i = 0; i < holder.getWidth(); i++){//Increment down the x coordinates
             for(int j = 0; j < holder.getHeight(); j++){//Increment down the y coordinates
                 int total=0;
                 int counter=0;
                 for(int x = i -blockSize; x <= i + blockSize; x++){
+                    int gaussX = 0;
                     for(int y = j - blockSize; y <= j + blockSize; y++){
+                        int gaussY = 0;
                         if(x != i && x < holder.getWidth() && x >= 0 && y != j && y < holder.getHeight() && y >=0){
-                            total += luminanceArray[x][y];
+                            total += luminanceArray[x][y] * gaussianMask [gaussY][gaussX];
                             counter += 1;
-
                         }
+                        gaussY++;
                     }
+                    gaussX++;
                 }
                 int threshNum = (total / counter) - constant;//average - constant
 
@@ -80,7 +129,7 @@ public class AdaptiveThreshold {
             }
         }
 
-
+        return holder;
 
     }
 
@@ -110,24 +159,20 @@ public class AdaptiveThreshold {
 
         //Storing luminance values in a 2D array so don't have to recalculate
         int[][] luminanceArray = getInts(holder);
-
-
-
+        //Run through image and change pixels based on pixels surrounding.
         for(int i = 0; i < holder.getWidth(); i++){//Increment down the x coordinates
             for(int j = 0; j < holder.getHeight(); j++){//Increment down the y coordinates
                 int total=0;
                 int counter=0;
-                for(int x = i -blockSize; x <= i + blockSize; x++){
+                for(int x = i - blockSize; x <= i + blockSize; x++){
                     for(int y = j - blockSize; y <= j + blockSize; y++){
                         if(x != i && x < holder.getWidth() && x >= 0 && y != j && y < holder.getHeight() && y >=0){
                             total += luminanceArray[x][y];
                             counter += 1;
-
                         }
                     }
                 }
                 int threshNum = (total / counter) - constant;//average - constant
-
                 //If number is less than the threshold (maxValue / 2 probably 127) then set black, else set white
                 if(threshNum < maxValue / 2 && i < holder.getWidth() && j < holder.getHeight()){
                     holder.setPixel(i, j, 0xFF000000);
@@ -138,45 +183,6 @@ public class AdaptiveThreshold {
         }
 
 
-        /*for(int i = 0; i < holder.getWidth(); i++){//Increment down the x coordinates
-            for(int j = 0; j < holder.getHeight(); j++){//Increment down the y coordinates
-                int total = 0;
-                int counter = 0;
-                for(int x = i - blockSize; x <= i + blockSize; x++){//Goes down X-Axis blockside left and right center pixel
-
-                    if(x != i && x < holder.getWidth() && x >= 0){
-
-                        total += luminanceArray[x][j];
-                        counter += 1;
-                        *//*
-                        int pixel = holder.getPixel(x, j);//curent pixel
-                        total += (int)((Color.red(pixel) * 0.3) + (Color.green(pixel) * 0.59) + (Color.blue(pixel) * 0.11));//get weighted grayscale value
-                        *//*
-                    }
-                }
-                for(int y = j - blockSize; y <= j + blockSize; y++){//Goes down Y-Axis blockSize above and below center pixel
-                    if(y != j && y < holder.getHeight() && y >= 0){
-
-                        total += luminanceArray[i][y];
-                        counter += 1;
-
-                        *//*
-                        int pixel = holder.getPixel(i, y);
-                        total += (int)((Color.red(pixel) * 0.3) + (Color.green(pixel) * 0.59) + (Color.blue(pixel) * 0.11));
-                        *//*
-                    }
-                }
-                int threshNum = (total / counter) - constant;//average - constant
-
-                //If number is less than the threshold (maxValue / 2 probably 127) then set black, else set white
-                if(threshNum < maxValue / 2){
-                    holder.setPixel(i, j, 0xFF000000);
-                }else{
-                    holder.setPixel(i, j, 0xFFFFFFFF);
-                }
-
-            }
-        }*/
 
         return holder;
 
@@ -194,7 +200,7 @@ public class AdaptiveThreshold {
         return grayscaleBmp;
     }
 
-   private int[] getValues(int[][] luminanceArray, int x, int y, int radius){
+   /*private int[] getValues(int[][] luminanceArray, int x, int y, int radius){
        int count = 0;
        int returnArray[];
        for(int i = 0; i <= (radius*2) +1; i++){
@@ -207,7 +213,7 @@ public class AdaptiveThreshold {
        for(int i = luminanceArray[x - radius][y - radius]; i <=)
 
 
-   }
+   }*/
 
     public Bitmap getBitmap() {
         return bitmap;

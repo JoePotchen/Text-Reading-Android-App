@@ -1,4 +1,4 @@
-package com.potchen.apps.cameratest;
+package com.potchen.apps.VisuallyImpairedReading;
 
 import org.junit.Test;
 

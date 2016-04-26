@@ -1,36 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="Advanced Developer Settings"
+        android:summary="Change thresholding settings"
+        >
+        <EditTextPreference
+            android:title="Max Luminance Value"
+            android:key="maxValue"
+            android:summary="Change the max luminance value. (Default: 255)"
+            ></EditTextPreference>
 
-    <EditTextPreference
-        android:title="Max Luminance Value"
-        android:key="maxValue"
-        android:summary="Change the max luminance value. (Default: 255)"
-        ></EditTextPreference>
-
-    <EditTextPreference
-        android:title="Bitmap Sample Size"
-        android:key="sampleSize"
-        android:summary="Change the inSampleSize of the Bitmap from the camera. 1/x, so bigger numbers mean smaller bitmaps. (Default: 4)"
-        ></EditTextPreference>
-
-
-    <EditTextPreference
-        android:title="Block Size"
-        android:key="blockSize"
-        android:summary="Change the size of the block around the selected pixel. (Default: 5)"
-        ></EditTextPreference>
+        <EditTextPreference
+            android:title="Bitmap Sample Size"
+            android:key="sampleSize"
+            android:summary="Change the inSampleSize of the Bitmap from the camera. 1/x, so bigger numbers mean smaller bitmaps. (Default: 4)"
+            ></EditTextPreference>
 
 
-    <EditTextPreference
-        android:title="Constant"
-        android:key="constant"
-        android:summary="Change the constant subtracted from the final thresholding value. (Default: 10)"
-        ></EditTextPreference>
+        <EditTextPreference
+            android:title="Block Size"
+            android:key="blockSize"
+            android:summary="Change the size of the block around the selected pixel. (Default: 5)"
+            ></EditTextPreference>
 
-    <CheckBoxPreference
-        android:title="Gaussian Thresholding"
-        android:summary="(CURRENTLY DOES NOT WORK) Change the thresholding type to Gaussian from Mean."
-        android:key="gaussian"
-        ></CheckBoxPreference>
 
+        <EditTextPreference
+            android:title="Constant"
+            android:key="constant"
+            android:summary="Change the constant subtracted from the final thresholding value. (Default: 10)"
+            ></EditTextPreference>
+
+        <CheckBoxPreference
+            android:title="Gaussian Thresholding"
+            android:summary="(CURRENTLY DOES NOT WORK) Change the thresholding type to Gaussian from Mean."
+            android:key="gaussian"
+            ></CheckBoxPreference>
+        <ListPreference
+            android:entries="@array/listOptions"
+            android:entryValues="@array/listValues"
+            android:key="listPref"
+            android:summary="Change the thresholding type. (Default: Mean)"
+            android:title="Threshold Type"
+            ></ListPreference>
+    </PreferenceCategory>
 </PreferenceScreen>

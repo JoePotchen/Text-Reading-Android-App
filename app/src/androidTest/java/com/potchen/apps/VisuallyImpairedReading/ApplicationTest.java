@@ -1,4 +1,4 @@
-package com.potchen.apps.cameratest;
+package com.potchen.apps.VisuallyImpairedReading;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

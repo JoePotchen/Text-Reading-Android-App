@@ -1,4 +1,4 @@
-package com.potchen.apps.cameratest;
+package com.potchen.apps.VisuallyImpairedReading;
 
 /**
  * Created by Joe on 3/4/16.
